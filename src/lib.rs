@@ -95,8 +95,14 @@ impl Universe {
         let size = (width * height) as usize;
         let mut cells = fixedbitset::FixedBitSet::with_capacity(size);
 
+        // // Symmetric
+        // for i in 0..size {
+        //     cells.set(i, i % 2 == 0 || i % 7 == 0);
+        // }
+
+        // Random
         for i in 0..size {
-            cells.set(i, i % 2 == 0 || i % 7 == 0);
+            cells.set(i, js_sys::Math::random() > 0.5);
         }
 
         Universe {
