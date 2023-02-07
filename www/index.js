@@ -27,7 +27,7 @@ const main = (gol) => {
         if (tickTimer > 16) {
             universe.tick();
             tickTimer = 0;
-            canvas.textContent = universe.render();
+            //canvas.textContent = universe.render();
             drawGrid(ctx, universe);
             drawCells(ctx, universe);
         }
@@ -71,12 +71,19 @@ const drawCell = (ctx, x, y, alive) => {
 
 const drawCells = (ctx, universe) => {
     const cellsPtr = universe.cells();
-    const cells = new Uint8Array(memory.buffer, cellsPtr, universe.width() * universe.height());
+    const cells = new Uint8Array(memory.buffer, cellsPtr, universe.width() * universe.height() / 8);
     for (let i=0; i < universe.width(); ++i) {
         for (let j=0; j < universe.height(); ++j) {
-            drawCell(ctx, i, j, cells[j * universe.width() + i]); 
+            const alive = bitIsSet(i + j * universe.width(), cells);
+            drawCell(ctx, i, j, alive);
         }
     }
+}
+
+const bitIsSet = (n, arr) => {
+    const byte = Math.floor(n / 8);
+    const mask = 1 << (n % 8);
+    return (arr[byte] & mask) === mask;
 }
 
 import("wasm-game-of-life").then((gol) => {
