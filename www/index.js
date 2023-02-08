@@ -5,38 +5,137 @@ const GRID_COLOR = "#cccccc";
 const DEAD_COLOR = "#ffffff";
 const ALIVE_COLOR = "#222222";
 
+let animationId = null;
+
 const main = (gol) => {
-    const universe = gol.Universe.new(128, 64);
+    const universe = gol.Universe.new(32, 48);
 
     const canvas = document.getElementById("game-of-life-canvas");
     canvas.height = (CELL_SIZE + 1) * universe.height() + 1;
     canvas.width = (CELL_SIZE + 1) * universe.width() + 1;
-
     const ctx = canvas.getContext('2d');
+
+    const canvasOnClick = (event) => {
+        const boundingRect = canvas.getBoundingClientRect();
+
+        const scaleX = canvas.width / boundingRect.width;
+        const scaleY = canvas.height / boundingRect.height;
+
+        const canvasLeft = (event.clientX - boundingRect.left) * scaleX;
+        const canvasTop = (event.clientY - boundingRect.top) * scaleY;
+
+        const row = Math.min(Math.floor(canvasTop / (CELL_SIZE + 1)), universe.height() - 1);
+        const col = Math.min(Math.floor(canvasLeft / (CELL_SIZE + 1)), universe.width() - 1);
+
+        if (event.ctrlKey) {
+            // Build a glider
+            universe.activate_cell(row, col+1);
+            universe.activate_cell(row+1, col+2);
+            universe.activate_cell(row+2, col);
+            universe.activate_cell(row+2, col+1);
+            universe.activate_cell(row+2, col+2);
+            console.log(row + 1, col + 2);
+        }
+        else if (event.shiftKey) {
+            // Build a pulsar
+            for (let i of [-1, 1]) {
+                for (let j of [-1, 1]) {
+                    universe.activate_cell(row+j*6, col+i*4);
+                    universe.activate_cell(row+j*6, col+i*3);
+                    universe.activate_cell(row+j*6, col+i*2);
+
+                    universe.activate_cell(row+j*4, col+i*6);
+                    universe.activate_cell(row+j*4, col+i*1);
+
+                    universe.activate_cell(row+j*3, col+i*6);
+                    universe.activate_cell(row+j*3, col+i*1);
+
+                    universe.activate_cell(row+j*2, col+i*6);
+                    universe.activate_cell(row+j*2, col+i*1);
+
+                    universe.activate_cell(row+j*1, col+i*4);
+                    universe.activate_cell(row+j*1, col+i*3);
+                    universe.activate_cell(row+j*1, col+i*2);
+                }
+            }
+        }
+        else {
+            // Toggle a single cell
+            universe.toggle_cell(row, col);
+        }
+        
+        drawGrid(ctx, universe);
+        drawCells(ctx, universe);
+    }
+
+    canvas.addEventListener("click", canvasOnClick);
+
 
     let previousTime = 0;
 
     let tickTimer = 0;
 
+    let speedMultiplier = 1.0;
+    const speedSlider = document.getElementById("speed-slider");
+    speedSlider.value = speedMultiplier;
+    speedSlider.addEventListener("input", (event) => {
+        speedMultiplier = event.target.value;
+    });
+
+    const randomButton = document.getElementById("random");
+    randomButton.addEventListener("click", () => {
+        universe.randomize();
+        drawCells(ctx, universe);
+    })
+
+    const clearButton = document.getElementById("clear");
+    clearButton.addEventListener("click", () => {
+        universe.clear();
+        drawCells(ctx, universe);
+    })
+
     const renderLoop = (time) => {
+        //debugger;
         const elapsed = time - previousTime;
         previousTime = time;
 
         tickTimer += elapsed;
 
-        if (tickTimer > 16) {
+        if (tickTimer > 16 / speedMultiplier) {
             universe.tick();
             tickTimer = 0;
             //canvas.textContent = universe.render();
             drawGrid(ctx, universe);
             drawCells(ctx, universe);
         }
-        requestAnimationFrame(renderLoop);
+        animationId = window.requestAnimationFrame(renderLoop);
     }
 
-    requestAnimationFrame(renderLoop);
+    const isPaused = () => {
+        return animationId === null;
+    }
+
+    const playPauseButton = document.getElementById("play-pause");
+
+    const play = () => {
+        playPauseButton.textContent = "⏸︎";
+        window.requestAnimationFrame(renderLoop);
+    }
+
+    const pause = () => {
+        playPauseButton.textContent = "▶";
+        window.cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+
+    playPauseButton.addEventListener("click", () => { isPaused() ? play() : pause()});
+
+    // Start the loop
+    play();
 
 }
+
+
 
 const drawGrid = (ctx, universe) => {
     ctx.beginPath();
