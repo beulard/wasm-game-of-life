@@ -24,8 +24,8 @@ const main = (gol) => {
         const canvasLeft = (event.clientX - boundingRect.left) * scaleX;
         const canvasTop = (event.clientY - boundingRect.top) * scaleY;
 
-        const row = Math.min(Math.floor(canvasTop / (CELL_SIZE + 1)), universe.height() - 1);
-        const col = Math.min(Math.floor(canvasLeft / (CELL_SIZE + 1)), universe.width() - 1);
+        let row = Math.min(Math.floor(canvasTop / (CELL_SIZE + 1)), universe.height() - 1);
+        let col = Math.min(Math.floor(canvasLeft / (CELL_SIZE + 1)), universe.width() - 1);
 
         if (event.ctrlKey) {
             // Build a glider
@@ -34,10 +34,15 @@ const main = (gol) => {
             universe.activate_cell(row+2, col);
             universe.activate_cell(row+2, col+1);
             universe.activate_cell(row+2, col+2);
-            console.log(row + 1, col + 2);
         }
         else if (event.shiftKey) {
             // Build a pulsar
+            // Ensure row, col are positive by adding
+            // the universe extent to them.
+            // The modulo applied in activate_cell should
+            // then find the proper value.
+            row += universe.height();
+            col += universe.width();
             for (let i of [-1, 1]) {
                 for (let j of [-1, 1]) {
                     universe.activate_cell(row+j*6, col+i*4);
