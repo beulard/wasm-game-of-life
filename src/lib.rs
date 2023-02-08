@@ -1,5 +1,7 @@
 mod utils;
 
+extern crate web_sys;
+
 use fixedbitset;
 use wasm_bindgen::prelude::*;
 
@@ -8,6 +10,12 @@ use wasm_bindgen::prelude::*;
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+macro_rules! log {
+    ( $( $t:tt )* ) => {
+        web_sys::console::log_1(&format!( $( $t )* ).into());
+    }
+}
 
 #[wasm_bindgen]
 pub struct Universe {
@@ -60,6 +68,14 @@ impl Universe {
                 let cell = self.cells[idx];
                 let live_neighbors = self.live_neighbor_count(row, col);
 
+                // log!(
+                //     "cell[{}, {}] is initially {:?} and has {} live neighbors",
+                //     row,
+                //     col,
+                //     cell,
+                //     live_neighbors
+                // );
+
                 next.set(
                     idx,
                     match (cell, live_neighbors) {
@@ -70,12 +86,15 @@ impl Universe {
                         (otherwise, _) => otherwise,
                     },
                 );
+                // log!("     it becomes {:?}", next[idx]);
             }
         }
         self.cells = next;
     }
 
     pub fn new(width: u32, height: u32) -> Universe {
+        utils::set_panic_hook();
+
         // // Make a symmetric universe
         // let cells = (0..width * height)
         //     .map(|i| {
@@ -104,23 +123,27 @@ impl Universe {
         //     .collect();
 
         let size = (width * height) as usize;
-        let mut cells = fixedbitset::FixedBitSet::with_capacity(size);
 
         // // Symmetric
         // for i in 0..size {
         //     cells.set(i, i % 2 == 0 || i % 7 == 0);
         // }
 
-        // Random
-        for i in 0..size {
-            cells.set(i, js_sys::Math::random() > 0.5);
-        }
-
         Universe {
             width,
             height,
-            cells,
+            cells: fixedbitset::FixedBitSet::with_capacity(size),
         }
+    }
+
+    pub fn randomize(&mut self) {
+        for i in 0..(self.width() * self.height()) as usize {
+            self.cells.set(i, js_sys::Math::random() > 0.5);
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.cells.clear();
     }
 
     /*pub fn render(&self) -> String {
@@ -151,6 +174,15 @@ impl Universe {
 
     pub fn cells(&self) -> *const u32 {
         self.cells.as_slice().as_ptr()
+    }
+
+    pub fn toggle_cell(&mut self, row: u32, col: u32) {
+        let idx = self.get_index(row % self.height(), col % self.width());
+        self.cells.toggle(idx);
+    }
+    pub fn activate_cell(&mut self, row: u32, col: u32) {
+        let idx = self.get_index(row % self.height(), col % self.width());
+        self.cells.set(idx, true);
     }
 }
 
